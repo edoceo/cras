@@ -8,17 +8,21 @@ require_once('../boot.php');
 session_start();
 
 // Authentication
-if (empty($_SESSION['sql_file'])) {
+if (empty($_SESSION['sql-hash'])) {
 	if ( ! empty($_COOKIE['cras-secret'])) {
-		$_SESSION['sql_file'] = $_COOKIE['cras-secret'];
+
+		$_SESSION['sql-hash'] = $_COOKIE['cras-secret'];
+
+		// Reset Cookie
 		setcookie('cras-secret', $_COOKIE['cras-secret'], [
 			'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
 		]);
+
 	}
 }
 
 //
-if (empty($_SESSION['sql_file'])) {
+if (empty($_SESSION['sql-hash'])) {
 
 	switch ($_POST['a']) {
 		case 'open':
@@ -26,21 +30,17 @@ if (empty($_SESSION['sql_file'])) {
 			$_SESSION = [];
 
 			$hash = sodium_bin2base64(sodium_crypto_generichash($_POST['auth']), SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING);
-			$sql_file = sprintf('%s/var/%s.sqlite', APP_ROOT, $hash);
-			if ( ! is_file($sql_file)) {
-				__exit_text("Create the file:\n  $sql_file\nto authenticate\n", 403);
-			}
-			if ( ! is_writable($sql_file)) {
-				__exit_text("The file:\n  $sql_file\nmust be writable by the web-server\n", 403);
-			}
 
-			$_SESSION['sql_file'] = $sql_file;
+			// _dbc will exit/fail if it cannot make the file
+			_dbc($hash);
 
-			setcookie('cras-secret', $sql_file, [
+			$_SESSION['sql-hash'] = $hash;
+
+			setcookie('cras-secret', $_SESSION['sql-hash'], [
 				'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
 			]);
 
-			__exit_301('/start');
+			__exit_301('/');
 
 	}
 
