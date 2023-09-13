@@ -8,38 +8,54 @@ require_once('../boot.php');
 session_start();
 
 // Authentication
-if (empty($_SESSION['auth'])) {
+if (empty($_SESSION['sql_file'])) {
 	if ( ! empty($_COOKIE['cras-secret'])) {
-		if (APP_PASS == $_COOKIE['cras-secret']) {
-			$_SESSION['auth'] = $_COOKIE['cras-secret'];
-			setcookie('cras-secret', $_COOKIE['cras-secret'], [
-				'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
-			]);
-		}
+		$_SESSION['sql_file'] = $_COOKIE['cras-secret'];
+		setcookie('cras-secret', $_COOKIE['cras-secret'], [
+			'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
+		]);
 	}
 }
 
 //
-if (empty($_SESSION['auth'])) {
+if (empty($_SESSION['sql_file'])) {
 
 	switch ($_POST['a']) {
 		case 'open':
-			if (APP_PASS == $_POST['auth']) {
-				$_SESSION['auth'] = APP_PASS;
-				setcookie('cras-secret', APP_PASS, [
-					'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
-				]);
-				__exit_301('/start');
+
+			$_SESSION = [];
+
+			$hash = sodium_bin2base64(sodium_crypto_generichash($_POST['auth']), SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING);
+			$sql_file = sprintf('%s/var/%s.sqlite', APP_ROOT, $hash);
+			if ( ! is_file($sql_file)) {
+				__exit_text("Create the file:\n  $sql_file\nto authenticate\n", 403);
 			}
+			if ( ! is_writable($sql_file)) {
+				__exit_text("The file:\n  $sql_file\nmust be writable by the web-server\n", 403);
+			}
+
+			$_SESSION['sql_file'] = $sql_file;
+
+			setcookie('cras-secret', $sql_file, [
+				'expires' => $_SERVER['REQUEST_TIME'] + 60 * 60 * 24 * 7,
+			]);
+
+			__exit_301('/start');
+
 	}
 
 	$title = 'Cras :: Authenticate';
 
 	$body = <<<HTML
+	<div class="container mt-4">
 	<form method="post">
-		<input name="auth">
-		<button name="a" type="submit" value="open">Open</button>
+		<div class="input-group">
+			<div class="input-group-text">Auth:</div>
+			<input class="form-control" name="auth">
+			<button class="btn btn-primary" name="a" type="submit" value="open">Open</button>
+		</div>
 	</form>
+	</div>
 	HTML;
 
 	require_once(APP_ROOT . '/output/html.php');
