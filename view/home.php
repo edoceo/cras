@@ -19,10 +19,10 @@ $dbc = _dbc();
 </div>
 
 <div class="mb-2">
-<form action="/cras/search">
+<form action="/cras">
 	<div class="input-group">
 		<label class="input-group-text">Search</label>
-		<input class="form-control" name="q">
+		<input class="form-control" name="q" value="<?= __h($_GET['q']) ?>">
 		<button class="btn btn-primary">Go</button>
 	</div>
 </form>
@@ -39,25 +39,27 @@ $arg = [];
 $sql = <<<SQL
 SELECT *
 FROM todo
+{WHERE}
 ORDER BY id DESC, sort, expires_at DESC, updated_at DESC
 LIMIT 20
 OFFSET $off
 SQL;
 
-if (!empty($_GET['tag'])) {
+$sql_where = [];
 
-	$arg = [ ':t1' => sprintf('%%#%s%%', $_GET['tag']) ];
-
-	$sql = <<<SQL
-	SELECT *
-	FROM todo
-	WHERE note LIKE :t1
-	ORDER BY id, sort, expires_at DESC, updated_at DESC
-	LIMIT 20
-	OFFSET 0
-	SQL;
-
+// General Search
+if ( ! empty($_GET['q'])) {
+	$sql_where = 'WHERE (name LIKE :q0 OR note LIKE :q0)';
+	$arg[':q0'] = sprintf('%%%s%%', $_GET['q']);
 }
+
+// Tags
+if ( ! empty($_GET['tag'])) {
+	$sql_where = 'WHERE note LIKE :t1';
+	$arg = [ ':t1' => sprintf('%%#%s%%', $_GET['tag']) ];
+}
+
+$sql = str_replace('{WHERE}', $sql_where, $sql);
 
 
 $todo_list = $dbc->fetchAll($sql, $arg);

@@ -88,7 +88,7 @@ switch ($r0) {
 	case '/': // v2
 	case '/start': // v1
 		$head['title'] = 'Cras';
-		require_once(APP_ROOT . '/view/start.php');
+		require_once(APP_ROOT . '/view/home.php');
 		break;
 	case '/create':
 	case '/incoming':
@@ -112,7 +112,6 @@ switch ($r0) {
 		require_once(APP_ROOT . '/view/share.php');
 
 		break;
-
 	case '/todo':
 		$head['title'] = 'Cras Todo';
 		$id = $path_list[1];
