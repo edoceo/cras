@@ -23,7 +23,7 @@ input, textarea {
 	width: 100%;
 }
 textarea {
-	height: 40vh;
+	height: 30vh;
 }
 
 section.todo {
